@@ -1,0 +1,27 @@
+<div class="project" data-id="{{ p.id }}">
+  <div class="project-header">
+    <div>
+      <div class="project-nome">{{ p.nome }}</div>
+      {% if p.objetivo %}<div class="project-objetivo">{{ p.objetivo }}</div>{% endif %}
+    </div>
+    <button class="del-project" onclick="deletarProjeto('{{ p.id }}')">✕</button>
+  </div>
+
+  <div class="progresso">{{ p.progresso }} concluídas</div>
+  <div class="bar"><div class="bar-fill" style="width: {{ p.progresso_pct }}%"></div></div>
+
+  <div class="tasks">
+    {% for t in p.tasks %}
+    <div class="task {{ 'done' if t.done else '' }}" data-id="{{ t.id }}">
+      <input type="checkbox" {{ 'checked' if t.done else '' }} onchange="toggleTask('{{ t.id }}', this.checked)">
+      <span class="descricao">{{ t.descricao }}</span>
+      <button class="del-task" onclick="deletarTask('{{ t.id }}')">✕</button>
+    </div>
+    {% endfor %}
+  </div>
+
+  <div class="add-task">
+    <input type="text" placeholder="Nova tarefa..." onkeydown="if(event.key==='Enter') adicionarTask('{{ p.id }}', this)">
+    <button onclick="adicionarTask('{{ p.id }}', this.previousElementSibling)">+</button>
+  </div>
+</div>
