@@ -394,10 +394,7 @@
 
     .tasks { margin-top: 16px; }
 
-    .grupo-tasks { min-height: 8px; }
-    .grupo-bloco-solto { min-height: 4px; }
-
-    .grupo-tasks.sortable-ghost {
+    .sortable-ghost {
       opacity: 0.3;
       background: var(--green-glow-soft);
       border-radius: 6px;
@@ -422,7 +419,8 @@
       user-select: none;
       flex-shrink: 0;
     }
-    .task:hover .drag-handle { visibility: visible; }
+    .task:hover .drag-handle,
+    .item-titulo:hover .drag-handle { visibility: visible; }
     .drag-handle:active { cursor: grabbing; }
 
     .task input[type=checkbox] {
@@ -471,50 +469,37 @@
     .task:hover .del-task { visibility: visible; }
     .task .del-task:hover { color: var(--danger); }
 
-    .grupo-titulo {
+    .item-titulo {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 16px;
+      margin-bottom: 4px;
+      padding-bottom: 4px;
+      border-bottom: 1px solid var(--border);
+    }
+    .item-titulo:first-child { margin-top: 0; }
+
+    .item-titulo-texto {
+      flex: 1;
       font-family: var(--mono);
       font-size: 10.5px;
       text-transform: uppercase;
       letter-spacing: 0.08em;
       color: var(--green-dim);
-      margin-top: 16px;
-      margin-bottom: 4px;
-      padding-bottom: 4px;
-      border-bottom: 1px solid var(--border);
-      display: flex;
-      align-items: center;
-      gap: 6px;
     }
-    .grupo-bloco:first-child .grupo-titulo { margin-top: 0; }
 
-    .grupo-titulo-texto { flex: 1; }
-
-    .grupo-drag-handle {
-      cursor: grab;
-      visibility: hidden;
-      font-size: 11px;
-    }
-    .grupo-drag-handle:active { cursor: grabbing; }
-    .grupo-titulo:hover .grupo-drag-handle { visibility: visible; }
-
-    .del-grupo {
+    .item-titulo .del-task {
       background: none;
       border: none;
       color: var(--text-faint);
       cursor: pointer;
       font-size: 11px;
       visibility: hidden;
-      text-transform: none;
-      letter-spacing: 0;
+      flex-shrink: 0;
     }
-    .grupo-titulo:hover .del-grupo { visibility: visible; }
-    .del-grupo:hover { color: var(--danger); }
-
-    .grupo-bloco.sortable-ghost {
-      opacity: 0.3;
-      background: var(--green-glow-soft);
-      border-radius: 8px;
-    }
+    .item-titulo:hover .del-task { visibility: visible; }
+    .item-titulo .del-task:hover { color: var(--danger); }
 
     .add-section { display: flex; gap: 8px; margin-top: 18px; }
 
@@ -551,19 +536,6 @@
     }
 
     .add-task { margin-top: 10px; display: flex; flex-direction: column; gap: 8px; }
-
-    .grupo-select {
-      background: var(--bg);
-      border: 1px solid var(--border);
-      color: var(--text-dim);
-      border-radius: 8px;
-      padding: 6px 12px;
-      font-size: 12px;
-      font-family: var(--mono);
-      cursor: pointer;
-      transition: border-color 0.15s ease;
-    }
-    .grupo-select:focus { outline: none; border-color: var(--green-dim); }
 
     .add-task-row { display: flex; gap: 8px; align-items: flex-end; }
 
@@ -701,11 +673,11 @@
       location.reload();
     }
 
-    async function criarGrupo(projectId, input) {
+    async function criarTitulo(projectId, input) {
       const nome = input.value.trim();
       if (!nome) return;
 
-      await fetch(`/projects/${projectId}/groups`, {
+      await fetch(`/projects/${projectId}/titulo`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ nome })
@@ -713,23 +685,14 @@
       location.reload();
     }
 
-    async function deletarGrupo(groupId) {
-      if (!confirm('Excluir esta seção? As tarefas dela ficam soltas, sem seção.')) return;
-      await fetch(`/groups/${groupId}`, { method: 'DELETE' });
-      location.reload();
-    }
-
     async function adicionarTask(projectId, textarea) {
       const descricao = textarea.value.trim();
       if (!descricao) return;
 
-      const select = textarea.closest('.add-task').querySelector('.grupo-select');
-      const group_id = select ? (select.value || null) : null;
-
       await fetch(`/projects/${projectId}/tasks`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ descricao, group_id })
+        body: JSON.stringify({ descricao })
       });
       location.reload();
     }
@@ -749,52 +712,27 @@
     }
 
     function salvarOrdem(tasksContainer) {
-      const groupsPayload = [];
-      tasksContainer.querySelectorAll('.grupo-bloco').forEach(blocoEl => {
-        groupsPayload.push({ id: blocoEl.dataset.groupId });
-      });
-
-      const tasksPayload = [];
-      tasksContainer.querySelectorAll('.grupo-tasks').forEach(grupoEl => {
-        const groupId = grupoEl.dataset.groupId || null;
-        grupoEl.querySelectorAll('.task').forEach(taskEl => {
-          tasksPayload.push({ id: taskEl.dataset.id, group_id: groupId });
-        });
-      });
+      const items = Array.from(tasksContainer.children)
+        .map(el => el.dataset.id)
+        .filter(Boolean);
 
       fetch('/tasks/reorder', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ groups: groupsPayload, tasks: tasksPayload })
+        body: JSON.stringify({ items })
       }).catch(() => {
         // silencioso: pior caso, ordem volta ao normal no próximo reload
       });
     }
 
     function initSortable() {
-      document.querySelectorAll('.tasks').forEach(tasksContainer => {
-        const projectId = tasksContainer.dataset.projectId;
-        const grupos = tasksContainer.querySelectorAll('.sortable-tasks');
-
-        grupos.forEach(grupoEl => {
-          new Sortable(grupoEl, {
-            group: `tasks-${projectId}`,
-            animation: 150,
-            handle: '.drag-handle',
-            ghostClass: 'sortable-ghost',
-            onEnd: () => salvarOrdem(tasksContainer)
-          });
+      document.querySelectorAll('.sortable-tasks').forEach(tasksContainer => {
+        new Sortable(tasksContainer, {
+          animation: 150,
+          handle: '.drag-handle',
+          ghostClass: 'sortable-ghost',
+          onEnd: () => salvarOrdem(tasksContainer)
         });
-
-        const grupoContainer = tasksContainer.querySelector('.sortable-grupos');
-        if (grupoContainer) {
-          new Sortable(grupoContainer, {
-            animation: 150,
-            handle: '.grupo-drag-handle',
-            ghostClass: 'sortable-ghost',
-            onEnd: () => salvarOrdem(tasksContainer)
-          });
-        }
       });
     }
 

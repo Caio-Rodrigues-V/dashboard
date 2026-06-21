@@ -13,45 +13,23 @@
   </div>
   <div class="bar"><div class="bar-fill" style="width: {{ p.progresso_pct }}%"></div></div>
 
-  <div class="tasks" data-project-id="{{ p.id }}">
-    <div class="grupos-container sortable-grupos">
-
-      {% if p.soltas %}
-      <div class="grupo-bloco grupo-bloco-solto" data-group-id="">
-        <div class="grupo-tasks sortable-tasks" data-group-id="">
-          {% for t in p.soltas %}
-          <div class="task {{ 'done' if t.done else '' }}" data-id="{{ t.id }}">
-            <span class="drag-handle">⋮⋮</span>
-            <input type="checkbox" {{ 'checked' if t.done else '' }} onchange="toggleTask('{{ t.id }}', this.checked)">
-            <span class="descricao">{{ t.descricao }}</span>
-            <button class="del-task" onclick="deletarTask('{{ t.id }}')">✕</button>
-          </div>
-          {% endfor %}
-        </div>
+  <div class="tasks sortable-tasks" data-project-id="{{ p.id }}">
+    {% for item in p.itens %}
+      {% if item.is_titulo %}
+      <div class="item-titulo" data-id="{{ item.id }}">
+        <span class="drag-handle">⋮⋮</span>
+        <span class="item-titulo-texto">{{ item.descricao }}</span>
+        <button class="del-task" onclick="deletarTask('{{ item.id }}')">✕</button>
+      </div>
+      {% else %}
+      <div class="task {{ 'done' if item.done else '' }}" data-id="{{ item.id }}">
+        <span class="drag-handle">⋮⋮</span>
+        <input type="checkbox" {{ 'checked' if item.done else '' }} onchange="toggleTask('{{ item.id }}', this.checked)">
+        <span class="descricao">{{ item.descricao }}</span>
+        <button class="del-task" onclick="deletarTask('{{ item.id }}')">✕</button>
       </div>
       {% endif %}
-
-      {% for grupo in p.grupos %}
-      <div class="grupo-bloco" data-group-id="{{ grupo.id }}">
-        <div class="grupo-titulo">
-          <span class="drag-handle grupo-drag-handle">⋮⋮</span>
-          <span class="grupo-titulo-texto">{{ grupo.nome }}</span>
-          <button class="del-grupo" onclick="deletarGrupo('{{ grupo.id }}')">✕</button>
-        </div>
-        <div class="grupo-tasks sortable-tasks" data-group-id="{{ grupo.id }}">
-          {% for t in grupo.tasks %}
-          <div class="task {{ 'done' if t.done else '' }}" data-id="{{ t.id }}">
-            <span class="drag-handle">⋮⋮</span>
-            <input type="checkbox" {{ 'checked' if t.done else '' }} onchange="toggleTask('{{ t.id }}', this.checked)">
-            <span class="descricao">{{ t.descricao }}</span>
-            <button class="del-task" onclick="deletarTask('{{ t.id }}')">✕</button>
-          </div>
-          {% endfor %}
-        </div>
-      </div>
-      {% endfor %}
-
-    </div>
+    {% endfor %}
   </div>
 
   <div class="add-section">
@@ -59,18 +37,12 @@
       type="text"
       class="nova-secao-input"
       placeholder="Nome da nova seção..."
-      onkeydown="if(event.key==='Enter'){ event.preventDefault(); criarGrupo('{{ p.id }}', this); }"
+      onkeydown="if(event.key==='Enter'){ event.preventDefault(); criarTitulo('{{ p.id }}', this); }"
     >
-    <button onclick="criarGrupo('{{ p.id }}', this.previousElementSibling)">+ Seção</button>
+    <button onclick="criarTitulo('{{ p.id }}', this.previousElementSibling)">+ Seção</button>
   </div>
 
   <div class="add-task">
-    <select class="grupo-select">
-      <option value="">Sem seção</option>
-      {% for grupo in p.grupos %}
-      <option value="{{ grupo.id }}">{{ grupo.nome }}</option>
-      {% endfor %}
-    </select>
     <div class="add-task-row">
       <textarea
         placeholder="Cole ou digite tarefas (separadas por vírgula ou linha)"
