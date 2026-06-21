@@ -486,6 +486,8 @@
     }
     .grupo-bloco:first-child .grupo-titulo { margin-top: 0; }
 
+    .grupo-titulo-texto { flex: 1; }
+
     .grupo-drag-handle {
       cursor: grab;
       visibility: hidden;
@@ -494,15 +496,62 @@
     .grupo-drag-handle:active { cursor: grabbing; }
     .grupo-titulo:hover .grupo-drag-handle { visibility: visible; }
 
+    .del-grupo {
+      background: none;
+      border: none;
+      color: var(--text-faint);
+      cursor: pointer;
+      font-size: 11px;
+      visibility: hidden;
+      text-transform: none;
+      letter-spacing: 0;
+    }
+    .grupo-titulo:hover .del-grupo { visibility: visible; }
+    .del-grupo:hover { color: var(--danger); }
+
     .grupo-bloco.sortable-ghost {
       opacity: 0.3;
       background: var(--green-glow-soft);
       border-radius: 8px;
     }
 
-    .add-task { margin-top: 14px; display: flex; flex-direction: column; gap: 8px; }
+    .add-section { display: flex; gap: 8px; margin-top: 18px; }
 
-    .grupo-input {
+    .nova-secao-input {
+      flex: 1;
+      background: var(--bg);
+      border: 1px dashed var(--border);
+      color: var(--text-dim);
+      border-radius: 8px;
+      padding: 7px 12px;
+      font-size: 12.5px;
+      font-family: var(--mono);
+      transition: border-color 0.15s ease;
+    }
+    .nova-secao-input::placeholder { color: var(--text-faint); }
+    .nova-secao-input:focus { outline: none; border-color: var(--green-dim); border-style: solid; }
+
+    .add-section button {
+      background: var(--bg-elevated);
+      color: var(--text-dim);
+      border: 1px dashed var(--border);
+      border-radius: 8px;
+      padding: 7px 14px;
+      cursor: pointer;
+      font-size: 12px;
+      font-family: var(--mono);
+      transition: border-color 0.15s ease, color 0.15s ease;
+      white-space: nowrap;
+    }
+    .add-section button:hover {
+      border-color: var(--green-dim);
+      border-style: solid;
+      color: var(--green-bright);
+    }
+
+    .add-task { margin-top: 10px; display: flex; flex-direction: column; gap: 8px; }
+
+    .grupo-select {
       background: var(--bg);
       border: 1px solid var(--border);
       color: var(--text-dim);
@@ -510,10 +559,10 @@
       padding: 6px 12px;
       font-size: 12px;
       font-family: var(--mono);
+      cursor: pointer;
       transition: border-color 0.15s ease;
     }
-    .grupo-input::placeholder { color: var(--text-faint); }
-    .grupo-input:focus { outline: none; border-color: var(--green-dim); }
+    .grupo-select:focus { outline: none; border-color: var(--green-dim); }
 
     .add-task-row { display: flex; gap: 8px; align-items: flex-end; }
 
@@ -651,17 +700,35 @@
       location.reload();
     }
 
+    async function criarGrupo(projectId, input) {
+      const nome = input.value.trim();
+      if (!nome) return;
+
+      await fetch(`/projects/${projectId}/groups`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nome })
+      });
+      location.reload();
+    }
+
+    async function deletarGrupo(groupId) {
+      if (!confirm('Excluir esta seção? As tarefas dela ficam soltas, sem seção.')) return;
+      await fetch(`/groups/${groupId}`, { method: 'DELETE' });
+      location.reload();
+    }
+
     async function adicionarTask(projectId, textarea) {
       const descricao = textarea.value.trim();
       if (!descricao) return;
 
-      const grupoInput = textarea.closest('.add-task').querySelector('.grupo-input');
-      const grupo = grupoInput ? grupoInput.value.trim() : '';
+      const select = textarea.closest('.add-task').querySelector('.grupo-select');
+      const group_id = select ? (select.value || null) : null;
 
       await fetch(`/projects/${projectId}/tasks`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ descricao, grupo })
+        body: JSON.stringify({ descricao, group_id })
       });
       location.reload();
     }
@@ -681,19 +748,23 @@
     }
 
     function salvarOrdem(tasksContainer) {
-      const items = [];
+      const groupsPayload = [];
+      tasksContainer.querySelectorAll('.grupo-bloco').forEach(blocoEl => {
+        groupsPayload.push({ id: blocoEl.dataset.groupId });
+      });
 
+      const tasksPayload = [];
       tasksContainer.querySelectorAll('.grupo-tasks').forEach(grupoEl => {
-        const grupoNome = grupoEl.dataset.grupoNome || '';
+        const groupId = grupoEl.dataset.groupId || null;
         grupoEl.querySelectorAll('.task').forEach(taskEl => {
-          items.push({ id: taskEl.dataset.id, grupo: grupoNome });
+          tasksPayload.push({ id: taskEl.dataset.id, group_id: groupId });
         });
       });
 
       fetch('/tasks/reorder', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ items })
+        body: JSON.stringify({ groups: groupsPayload, tasks: tasksPayload })
       }).catch(() => {
         // silencioso: pior caso, ordem volta ao normal no próximo reload
       });
@@ -720,7 +791,6 @@
             animation: 150,
             handle: '.grupo-drag-handle',
             ghostClass: 'sortable-ghost',
-            draggable: '.grupo-bloco:has(.grupo-titulo)',
             onEnd: () => salvarOrdem(tasksContainer)
           });
         }
