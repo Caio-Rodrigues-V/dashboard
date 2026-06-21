@@ -1,4 +1,5 @@
 import os
+import re
 from flask import Flask, request, jsonify, render_template
 from supabase import create_client, Client
 
@@ -62,17 +63,18 @@ def delete_project(project_id):
 @app.route("/projects/<project_id>/tasks", methods=["POST"])
 def create_task(project_id):
     data = request.json
-    descricao = (data.get("descricao") or "").strip()
+    raw = data.get("descricao") or ""
 
-    if not descricao:
+    partes = re.split(r"[,\n]", raw)
+    descricoes = [p.strip() for p in partes if p.strip()]
+
+    if not descricoes:
         return jsonify({"error": "descricao é obrigatória"}), 400
 
-    result = supabase.table("tasks").insert({
-        "project_id": project_id,
-        "descricao": descricao
-    }).execute()
+    novas_tasks = [{"project_id": project_id, "descricao": d} for d in descricoes]
+    result = supabase.table("tasks").insert(novas_tasks).execute()
 
-    return jsonify(result.data[0]), 201
+    return jsonify(result.data), 201
 
 
 @app.route("/tasks/<task_id>", methods=["PATCH"])

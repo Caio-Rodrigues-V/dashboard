@@ -4,91 +4,559 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Painel de Projetos</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
   <style>
+    :root {
+      --bg: #050706;
+      --bg-elevated: #0a0f0c;
+      --bg-card: #0c1310;
+      --border: #1a2620;
+      --border-hover: #2d4536;
+      --green: #4dff9e;
+      --green-bright: #6effb3;
+      --green-dim: #1f8f53;
+      --green-glow: rgba(77, 255, 158, 0.25);
+      --green-glow-soft: rgba(77, 255, 158, 0.08);
+      --text: #eef5f1;
+      --text-dim: #7d8c84;
+      --text-faint: #4a5650;
+      --danger: #ff6b6b;
+      --display: 'Space Grotesk', sans-serif;
+      --mono: 'JetBrains Mono', monospace;
+      --sans: 'Inter', -apple-system, sans-serif;
+    }
+
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: -apple-system, system-ui, sans-serif; background: #0f1115; color: #e8e8e8; padding: 24px; }
-    .container { max-width: 1000px; margin: 0 auto; }
-    h1 { font-size: 22px; margin-bottom: 20px; }
 
-    .new-project { background: #1a1d24; border: 1px solid #2a2e38; border-radius: 10px; padding: 16px; margin-bottom: 24px; }
-    .new-project input, .new-project textarea, .new-project select {
-      width: 100%; background: #0f1115; border: 1px solid #2a2e38; color: #e8e8e8;
-      border-radius: 6px; padding: 8px 10px; margin-bottom: 8px; font-size: 14px; font-family: inherit;
+    html { background: var(--bg); }
+
+    body {
+      font-family: var(--sans);
+      background:
+        radial-gradient(ellipse 900px 600px at 20% -5%, rgba(77,255,158,0.10), transparent 60%),
+        radial-gradient(ellipse 700px 500px at 90% 15%, rgba(77,255,158,0.06), transparent 60%),
+        radial-gradient(ellipse 1000px 700px at 50% 100%, rgba(77,255,158,0.04), transparent 60%),
+        var(--bg);
+      background-attachment: fixed;
+      color: var(--text);
+      padding: 48px 24px 100px;
+      min-height: 100vh;
+      position: relative;
     }
+
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(77,255,158,0.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(77,255,158,0.04) 1px, transparent 1px);
+      background-size: 56px 56px;
+      pointer-events: none;
+      mask-image: radial-gradient(ellipse 1000px 700px at 50% 0%, black, transparent 75%);
+      z-index: 0;
+    }
+
+    body::after {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background: repeating-linear-gradient(
+        0deg,
+        rgba(0,0,0,0.12) 0px,
+        transparent 1px,
+        transparent 3px
+      );
+      pointer-events: none;
+      opacity: 0.3;
+      z-index: 0;
+    }
+
+    .container { max-width: 1120px; margin: 0 auto; position: relative; z-index: 1; }
+
+    .header-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 4px;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+
+    .header-left { display: flex; align-items: center; gap: 14px; }
+
+    .status-badge {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 12px;
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: 100px;
+    }
+
+    .status-badge .dot {
+      width: 7px; height: 7px;
+      background: var(--green);
+      border-radius: 50%;
+      box-shadow: 0 0 6px 2px var(--green-glow), 0 0 14px 4px var(--green-glow-soft);
+      animation: pulse 2.4s ease-in-out infinite;
+    }
+
+    .status-badge span {
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--text-dim);
+      letter-spacing: 0.04em;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.5; transform: scale(0.85); }
+    }
+
+    h1 {
+      font-family: var(--display);
+      font-size: 32px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      background: linear-gradient(180deg, #ffffff 0%, #b8c9bf 100%);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+    }
+
+    .subtitle {
+      font-family: var(--mono);
+      font-size: 12.5px;
+      color: var(--text-faint);
+      margin-bottom: 36px;
+      letter-spacing: 0.01em;
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+      margin-bottom: 32px;
+    }
+
+    @media (max-width: 700px) { .stats { grid-template-columns: 1fr; } }
+
+    .stat-card {
+      background: linear-gradient(180deg, var(--bg-elevated) 0%, var(--bg-card) 100%);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 18px 20px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .stat-card::before {
+      content: '';
+      position: absolute;
+      top: -40%; right: -20%;
+      width: 140px; height: 140px;
+      background: radial-gradient(circle, var(--green-glow-soft), transparent 70%);
+      pointer-events: none;
+    }
+
+    .stat-label {
+      font-family: var(--mono);
+      font-size: 10.5px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-faint);
+      margin-bottom: 8px;
+    }
+
+    .stat-value {
+      font-family: var(--display);
+      font-size: 28px;
+      font-weight: 700;
+      letter-spacing: -0.01em;
+      color: var(--text);
+    }
+
+    .stat-value.accent { color: var(--green-bright); text-shadow: 0 0 20px var(--green-glow); }
+
+    .new-project {
+      background: linear-gradient(180deg, var(--bg-elevated) 0%, var(--bg-card) 100%);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 24px;
+      margin-bottom: 40px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .new-project::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 10%; right: 10%;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--green-dim), transparent);
+      opacity: 0.6;
+    }
+
+    .form-title {
+      font-family: var(--display);
+      font-size: 15px;
+      font-weight: 600;
+      margin-bottom: 18px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .form-title::before {
+      content: '+';
+      color: var(--green);
+      font-size: 18px;
+    }
+
+    .field-label {
+      font-family: var(--mono);
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-faint);
+      margin-bottom: 6px;
+      display: block;
+    }
+
+    .new-project input,
+    .new-project textarea,
+    .new-project select {
+      width: 100%;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      color: var(--text);
+      border-radius: 9px;
+      padding: 11px 13px;
+      margin-bottom: 16px;
+      font-size: 14px;
+      font-family: var(--sans);
+      transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    }
+
+    .new-project input::placeholder,
+    .new-project textarea::placeholder { color: var(--text-faint); }
+
+    .new-project input:focus,
+    .new-project textarea:focus,
+    .new-project select:focus {
+      outline: none;
+      border-color: var(--green-dim);
+      box-shadow: 0 0 0 3px var(--green-glow-soft);
+    }
+
+    .new-project textarea { resize: vertical; min-height: 60px; }
+
+    .new-project select {
+      cursor: pointer;
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%237d8c84' stroke-width='1.5' fill='none' fill-rule='evenodd'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 14px center;
+      padding-right: 36px;
+    }
+
     .new-project button {
-      background: #4f7cff; color: white; border: none; border-radius: 6px;
-      padding: 8px 16px; cursor: pointer; font-size: 14px;
+      background: linear-gradient(135deg, var(--green-bright), var(--green-dim));
+      color: #04140a;
+      border: none;
+      border-radius: 9px;
+      padding: 11px 20px;
+      cursor: pointer;
+      font-size: 13.5px;
+      font-weight: 700;
+      font-family: var(--sans);
+      letter-spacing: 0.01em;
+      transition: filter 0.15s ease, box-shadow 0.2s ease, transform 0.1s ease;
+      box-shadow: 0 0 0 0 var(--green-glow);
     }
-    .new-project button:hover { background: #3d68ed; }
 
-    .columns { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
-    @media (max-width: 720px) { .columns { grid-template-columns: 1fr; } }
+    .new-project button:hover {
+      filter: brightness(1.08);
+      box-shadow: 0 4px 24px var(--green-glow);
+      transform: translateY(-1px);
+    }
 
-    .column-title { font-size: 13px; text-transform: uppercase; letter-spacing: 0.05em; color: #9499a6; margin-bottom: 10px; }
+    .new-project button:active { transform: translateY(0); }
 
-    .project { background: #1a1d24; border: 1px solid #2a2e38; border-radius: 10px; padding: 16px; margin-bottom: 14px; }
-    .project-header { display: flex; justify-content: space-between; align-items: flex-start; }
-    .project-nome { font-size: 16px; font-weight: 600; }
-    .project-objetivo { font-size: 13px; color: #9499a6; margin-top: 4px; }
-    .progresso { font-size: 12px; color: #9499a6; margin-top: 6px; }
-    .bar { height: 4px; background: #2a2e38; border-radius: 2px; margin-top: 4px; overflow: hidden; }
-    .bar-fill { height: 100%; background: #4f7cff; }
+    .columns { display: grid; grid-template-columns: 1fr 1fr; gap: 28px; }
+    @media (max-width: 760px) { .columns { grid-template-columns: 1fr; } }
 
-    .del-project { background: none; border: none; color: #6a6f7a; cursor: pointer; font-size: 16px; }
-    .del-project:hover { color: #e8576a; }
+    .column-title {
+      font-family: var(--display);
+      font-size: 13px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text);
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
 
-    .tasks { margin-top: 12px; }
-    .task { display: flex; align-items: center; gap: 8px; padding: 5px 0; font-size: 14px; }
-    .task input[type=checkbox] { width: 16px; height: 16px; cursor: pointer; }
-    .task.done .descricao { text-decoration: line-through; color: #6a6f7a; }
-    .task .descricao { flex: 1; }
-    .task .del-task { background: none; border: none; color: #4a4f5a; cursor: pointer; font-size: 13px; visibility: hidden; }
+    .column-title .count {
+      font-family: var(--mono);
+      font-size: 11px;
+      font-weight: 400;
+      color: var(--text-faint);
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      padding: 2px 8px;
+      border-radius: 100px;
+    }
+
+    .column-title::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: linear-gradient(90deg, var(--border), transparent);
+    }
+
+    .project {
+      background: linear-gradient(165deg, var(--bg-card) 0%, var(--bg-elevated) 100%);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 20px 22px;
+      margin-bottom: 16px;
+      transition: border-color 0.25s ease, transform 0.2s ease, box-shadow 0.25s ease;
+      position: relative;
+    }
+
+    .project:hover {
+      border-color: var(--border-hover);
+      transform: translateY(-2px);
+      box-shadow: 0 8px 30px -10px rgba(0,0,0,0.5), 0 0 0 1px var(--green-glow-soft);
+    }
+
+    .project-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+    .project-nome { font-family: var(--display); font-size: 16px; font-weight: 600; letter-spacing: -0.01em; }
+    .project-objetivo { font-size: 13px; color: var(--text-dim); margin-top: 5px; line-height: 1.45; }
+
+    .progresso-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      margin-top: 16px;
+      margin-bottom: 7px;
+    }
+
+    .progresso {
+      font-family: var(--mono);
+      font-size: 11.5px;
+      color: var(--text-faint);
+      letter-spacing: 0.02em;
+    }
+
+    .progresso strong { color: var(--green-bright); font-weight: 600; }
+
+    .progresso-pct {
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--green-dim);
+    }
+
+    .bar {
+      height: 4px;
+      background: var(--border);
+      border-radius: 3px;
+      overflow: hidden;
+    }
+
+    .bar-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--green-dim), var(--green-bright));
+      box-shadow: 0 0 10px var(--green-glow);
+      transition: width 0.3s ease;
+    }
+
+    .del-project {
+      background: none;
+      border: none;
+      color: var(--text-faint);
+      cursor: pointer;
+      font-size: 15px;
+      line-height: 1;
+      padding: 3px;
+      border-radius: 5px;
+      transition: color 0.15s ease, background 0.15s ease;
+      flex-shrink: 0;
+    }
+    .del-project:hover { color: var(--danger); background: rgba(255,107,107,0.1); }
+
+    .tasks { margin-top: 16px; }
+
+    .task {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      padding: 7px 0;
+      font-size: 13.5px;
+    }
+
+    .task input[type=checkbox] {
+      appearance: none;
+      width: 16px; height: 16px;
+      min-width: 16px;
+      margin-top: 2px;
+      border: 1.5px solid var(--border-hover);
+      border-radius: 5px;
+      cursor: pointer;
+      position: relative;
+      transition: all 0.15s ease;
+      background: var(--bg);
+    }
+
+    .task input[type=checkbox]:hover { border-color: var(--green-dim); }
+
+    .task input[type=checkbox]:checked {
+      background: linear-gradient(135deg, var(--green-bright), var(--green-dim));
+      border-color: var(--green);
+      box-shadow: 0 0 8px var(--green-glow-soft);
+    }
+
+    .task input[type=checkbox]:checked::after {
+      content: '';
+      position: absolute;
+      left: 5px; top: 1.5px;
+      width: 4px; height: 8px;
+      border: solid #04140a;
+      border-width: 0 1.5px 1.5px 0;
+      transform: rotate(45deg);
+    }
+
+    .task.done .descricao { text-decoration: line-through; color: var(--text-faint); }
+    .task .descricao { flex: 1; line-height: 1.45; padding-top: 1px; }
+
+    .task .del-task {
+      background: none;
+      border: none;
+      color: var(--text-faint);
+      cursor: pointer;
+      font-size: 12px;
+      visibility: hidden;
+      flex-shrink: 0;
+    }
     .task:hover .del-task { visibility: visible; }
+    .task .del-task:hover { color: var(--danger); }
 
-    .add-task { display: flex; gap: 6px; margin-top: 10px; }
-    .add-task input {
-      flex: 1; background: #0f1115; border: 1px solid #2a2e38; color: #e8e8e8;
-      border-radius: 6px; padding: 6px 10px; font-size: 13px;
+    .add-task { display: flex; gap: 8px; margin-top: 14px; align-items: flex-end; }
+
+    .add-task textarea {
+      flex: 1;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      color: var(--text);
+      border-radius: 8px;
+      padding: 8px 12px;
+      font-size: 13px;
+      font-family: var(--sans);
+      resize: none;
+      overflow: hidden;
+      line-height: 1.4;
+      max-height: 120px;
+      transition: border-color 0.15s ease;
     }
+    .add-task textarea::placeholder { color: var(--text-faint); }
+    .add-task textarea:focus { outline: none; border-color: var(--green-dim); }
+
     .add-task button {
-      background: #2a2e38; color: #e8e8e8; border: none; border-radius: 6px;
-      padding: 6px 12px; cursor: pointer; font-size: 13px;
+      background: var(--bg-elevated);
+      color: var(--green-bright);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 8px 15px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 600;
+      transition: border-color 0.15s ease, background 0.15s ease;
     }
-    .add-task button:hover { background: #353a46; }
+    .add-task button:hover {
+      border-color: var(--green-dim);
+      background: var(--bg-card);
+      box-shadow: 0 0 12px var(--green-glow-soft);
+    }
 
-    .empty { color: #6a6f7a; font-size: 14px; text-align: center; padding: 30px 0; }
+    .empty {
+      font-family: var(--mono);
+      color: var(--text-faint);
+      font-size: 13px;
+      text-align: center;
+      padding: 36px 0;
+      border: 1px dashed var(--border);
+      border-radius: 14px;
+    }
   </style>
 </head>
 <body>
   <div class="container">
-    <h1>📋 Painel de Projetos</h1>
+    <div class="header-row">
+      <div class="header-left">
+        <h1>Painel de Projetos</h1>
+      </div>
+      <div class="status-badge">
+        <span class="dot"></span>
+        <span>{{ (freelance|length) + (pessoal|length) }} ATIVOS</span>
+      </div>
+    </div>
+    <div class="subtitle">acompanhamento manual · freelance &amp; pessoal</div>
+
+    <div class="stats">
+      <div class="stat-card">
+        <div class="stat-label">Total de projetos</div>
+        <div class="stat-value">{{ (freelance|length) + (pessoal|length) }}</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Freelance</div>
+        <div class="stat-value accent">{{ freelance|length }}</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Pessoal</div>
+        <div class="stat-value accent">{{ pessoal|length }}</div>
+      </div>
+    </div>
 
     <div class="new-project">
+      <div class="form-title">Novo projeto</div>
+
+      <label class="field-label">Nome</label>
       <input type="text" id="novo-nome" placeholder="Nome do projeto">
-      <textarea id="novo-objetivo" placeholder="Objetivo do projeto" rows="2"></textarea>
+
+      <label class="field-label">Objetivo</label>
+      <textarea id="novo-objetivo" placeholder="O que esse projeto entrega" rows="2"></textarea>
+
+      <label class="field-label">Categoria</label>
       <select id="novo-tipo">
         <option value="pessoal">Pessoal</option>
         <option value="freelance">Freelance</option>
       </select>
-      <button onclick="criarProjeto()">+ Adicionar projeto</button>
+
+      <button onclick="criarProjeto()">Adicionar projeto</button>
     </div>
 
     <div class="columns">
       <div>
-        <div class="column-title">Freelance</div>
+        <div class="column-title">Freelance <span class="count">{{ freelance|length }}</span></div>
         {% for p in freelance %}
           {% include "_project_card.html" %}
         {% else %}
-          <div class="empty">Nenhum projeto freelance ainda.</div>
+          <div class="empty">nenhum projeto freelance ainda</div>
         {% endfor %}
       </div>
 
       <div>
-        <div class="column-title">Pessoal</div>
+        <div class="column-title">Pessoal <span class="count">{{ pessoal|length }}</span></div>
         {% for p in pessoal %}
           {% include "_project_card.html" %}
         {% else %}
-          <div class="empty">Nenhum projeto pessoal ainda.</div>
+          <div class="empty">nenhum projeto pessoal ainda</div>
         {% endfor %}
       </div>
     </div>
@@ -115,8 +583,8 @@
       location.reload();
     }
 
-    async function adicionarTask(projectId, input) {
-      const descricao = input.value.trim();
+    async function adicionarTask(projectId, textarea) {
+      const descricao = textarea.value.trim();
       if (!descricao) return;
 
       await fetch(`/projects/${projectId}/tasks`, {

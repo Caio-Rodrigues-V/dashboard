@@ -7,7 +7,10 @@
     <button class="del-project" onclick="deletarProjeto('{{ p.id }}')">✕</button>
   </div>
 
-  <div class="progresso">{{ p.progresso }} concluídas</div>
+  <div class="progresso-row">
+    <span class="progresso"><strong>{{ p.progresso }}</strong> concluídas</span>
+    <span class="progresso-pct">{{ p.progresso_pct }}%</span>
+  </div>
   <div class="bar"><div class="bar-fill" style="width: {{ p.progresso_pct }}%"></div></div>
 
   <div class="tasks">
@@ -21,7 +24,12 @@
   </div>
 
   <div class="add-task">
-    <input type="text" placeholder="Nova tarefa..." onkeydown="if(event.key==='Enter') adicionarTask('{{ p.id }}', this)">
+    <textarea
+      placeholder="Cole ou digite tarefas (separadas por vírgula ou linha)"
+      rows="1"
+      onkeydown="if(event.key==='Enter' && !event.shiftKey){ event.preventDefault(); adicionarTask('{{ p.id }}', this); }"
+      oninput="this.rows = this.value.split('\n').length"
+    ></textarea>
     <button onclick="adicionarTask('{{ p.id }}', this.previousElementSibling)">+</button>
   </div>
 </div>
