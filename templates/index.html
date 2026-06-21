@@ -394,21 +394,6 @@
 
     .tasks { margin-top: 16px; }
 
-    .grupo-bloco { }
-
-    .grupo-titulo {
-      font-family: var(--mono);
-      font-size: 10.5px;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-      color: var(--green-dim);
-      margin-top: 16px;
-      margin-bottom: 4px;
-      padding-bottom: 4px;
-      border-bottom: 1px solid var(--border);
-    }
-    .grupo-bloco:first-child .grupo-titulo { margin-top: 0; }
-
     .grupo-tasks { min-height: 8px; }
 
     .grupo-tasks.sortable-ghost {
@@ -484,6 +469,36 @@
     }
     .task:hover .del-task { visibility: visible; }
     .task .del-task:hover { color: var(--danger); }
+
+    .grupo-titulo {
+      font-family: var(--mono);
+      font-size: 10.5px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--green-dim);
+      margin-top: 16px;
+      margin-bottom: 4px;
+      padding-bottom: 4px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .grupo-bloco:first-child .grupo-titulo { margin-top: 0; }
+
+    .grupo-drag-handle {
+      cursor: grab;
+      visibility: hidden;
+      font-size: 11px;
+    }
+    .grupo-drag-handle:active { cursor: grabbing; }
+    .grupo-titulo:hover .grupo-drag-handle { visibility: visible; }
+
+    .grupo-bloco.sortable-ghost {
+      opacity: 0.3;
+      background: var(--green-glow-soft);
+      border-radius: 8px;
+    }
 
     .add-task { margin-top: 14px; display: flex; flex-direction: column; gap: 8px; }
 
@@ -698,6 +713,17 @@
             onEnd: () => salvarOrdem(tasksContainer)
           });
         });
+
+        const grupoContainer = tasksContainer.querySelector('.sortable-grupos');
+        if (grupoContainer) {
+          new Sortable(grupoContainer, {
+            animation: 150,
+            handle: '.grupo-drag-handle',
+            ghostClass: 'sortable-ghost',
+            draggable: '.grupo-bloco:has(.grupo-titulo)',
+            onEnd: () => salvarOrdem(tasksContainer)
+          });
+        }
       });
     }
 

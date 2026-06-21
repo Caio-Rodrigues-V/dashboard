@@ -14,10 +14,14 @@
   <div class="bar"><div class="bar-fill" style="width: {{ p.progresso_pct }}%"></div></div>
 
   <div class="tasks" data-project-id="{{ p.id }}">
+    <div class="grupos-container sortable-grupos">
     {% for grupo in p.grupos %}
     <div class="grupo-bloco" data-grupo-nome="{{ grupo.nome or '' }}">
       {% if grupo.nome %}
-      <div class="grupo-titulo">{{ grupo.nome }}</div>
+      <div class="grupo-titulo">
+        <span class="drag-handle grupo-drag-handle">⋮⋮</span>
+        <span class="grupo-titulo-texto">{{ grupo.nome }}</span>
+      </div>
       {% endif %}
       <div class="grupo-tasks sortable-tasks" data-grupo-nome="{{ grupo.nome or '' }}">
         {% for t in grupo.tasks %}
@@ -31,6 +35,7 @@
       </div>
     </div>
     {% endfor %}
+    </div>
   </div>
 
   <div class="add-task">
