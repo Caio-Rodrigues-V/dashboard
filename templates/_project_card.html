@@ -14,22 +14,34 @@
   <div class="bar"><div class="bar-fill" style="width: {{ p.progresso_pct }}%"></div></div>
 
   <div class="tasks">
-    {% for t in p.tasks %}
-    <div class="task {{ 'done' if t.done else '' }}" data-id="{{ t.id }}">
-      <input type="checkbox" {{ 'checked' if t.done else '' }} onchange="toggleTask('{{ t.id }}', this.checked)">
-      <span class="descricao">{{ t.descricao }}</span>
-      <button class="del-task" onclick="deletarTask('{{ t.id }}')">✕</button>
-    </div>
+    {% for grupo in p.grupos %}
+      {% if grupo.nome %}
+      <div class="grupo-titulo">{{ grupo.nome }}</div>
+      {% endif %}
+      {% for t in grupo.tasks %}
+      <div class="task {{ 'done' if t.done else '' }}" data-id="{{ t.id }}">
+        <input type="checkbox" {{ 'checked' if t.done else '' }} onchange="toggleTask('{{ t.id }}', this.checked)">
+        <span class="descricao">{{ t.descricao }}</span>
+        <button class="del-task" onclick="deletarTask('{{ t.id }}')">✕</button>
+      </div>
+      {% endfor %}
     {% endfor %}
   </div>
 
   <div class="add-task">
-    <textarea
-      placeholder="Cole ou digite tarefas (separadas por vírgula ou linha)"
-      rows="1"
-      onkeydown="if(event.key==='Enter' && !event.shiftKey){ event.preventDefault(); adicionarTask('{{ p.id }}', this); }"
-      oninput="this.rows = this.value.split('\n').length"
-    ></textarea>
-    <button onclick="adicionarTask('{{ p.id }}', this.previousElementSibling)">+</button>
+    <input
+      type="text"
+      class="grupo-input"
+      placeholder="Título da seção (opcional)"
+    >
+    <div class="add-task-row">
+      <textarea
+        placeholder="Cole ou digite tarefas (separadas por vírgula ou linha)"
+        rows="1"
+        onkeydown="if(event.key==='Enter' && !event.shiftKey){ event.preventDefault(); adicionarTask('{{ p.id }}', this); }"
+        oninput="this.rows = this.value.split('\n').length"
+      ></textarea>
+      <button onclick="adicionarTask('{{ p.id }}', this.previousElementSibling)">+</button>
+    </div>
   </div>
 </div>

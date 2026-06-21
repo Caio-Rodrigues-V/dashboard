@@ -21,11 +21,23 @@ def index():
 
     for p in projects:
         p_tasks = tasks_by_project.get(p["id"], [])
-        p["tasks"] = sorted(p_tasks, key=lambda x: x["created_at"])
+        p_tasks_sorted = sorted(p_tasks, key=lambda x: x["created_at"])
         total = len(p_tasks)
         done = sum(1 for t in p_tasks if t["done"])
         p["progresso"] = f"{done}/{total}" if total else "0/0"
         p["progresso_pct"] = int((done / total) * 100) if total else 0
+
+        # agrupa por "grupo": None vira um grupo "Geral" implícito (sem cabeçalho)
+        grupos = {}
+        ordem_grupos = []
+        for t in p_tasks_sorted:
+            chave = t.get("grupo") or None
+            if chave not in grupos:
+                grupos[chave] = []
+                ordem_grupos.append(chave)
+            grupos[chave].append(t)
+
+        p["grupos"] = [{"nome": g, "tasks": grupos[g]} for g in ordem_grupos]
 
     freelance = [p for p in projects if p["tipo"] == "freelance"]
     pessoal = [p for p in projects if p["tipo"] == "pessoal"]
@@ -64,6 +76,7 @@ def delete_project(project_id):
 def create_task(project_id):
     data = request.json
     raw = data.get("descricao") or ""
+    grupo = (data.get("grupo") or "").strip() or None
 
     partes = re.split(r"[,\n]", raw)
     descricoes = [p.strip() for p in partes if p.strip()]
@@ -71,7 +84,7 @@ def create_task(project_id):
     if not descricoes:
         return jsonify({"error": "descricao é obrigatória"}), 400
 
-    novas_tasks = [{"project_id": project_id, "descricao": d} for d in descricoes]
+    novas_tasks = [{"project_id": project_id, "descricao": d, "grupo": grupo} for d in descricoes]
     result = supabase.table("tasks").insert(novas_tasks).execute()
 
     return jsonify(result.data), 201

@@ -393,6 +393,19 @@
 
     .tasks { margin-top: 16px; }
 
+    .grupo-titulo {
+      font-family: var(--mono);
+      font-size: 10.5px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--green-dim);
+      margin-top: 16px;
+      margin-bottom: 4px;
+      padding-bottom: 4px;
+      border-bottom: 1px solid var(--border);
+    }
+    .grupo-titulo:first-child { margin-top: 0; }
+
     .task {
       display: flex;
       align-items: flex-start;
@@ -447,9 +460,24 @@
     .task:hover .del-task { visibility: visible; }
     .task .del-task:hover { color: var(--danger); }
 
-    .add-task { display: flex; gap: 8px; margin-top: 14px; align-items: flex-end; }
+    .add-task { margin-top: 14px; display: flex; flex-direction: column; gap: 8px; }
 
-    .add-task textarea {
+    .grupo-input {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      color: var(--text-dim);
+      border-radius: 8px;
+      padding: 6px 12px;
+      font-size: 12px;
+      font-family: var(--mono);
+      transition: border-color 0.15s ease;
+    }
+    .grupo-input::placeholder { color: var(--text-faint); }
+    .grupo-input:focus { outline: none; border-color: var(--green-dim); }
+
+    .add-task-row { display: flex; gap: 8px; align-items: flex-end; }
+
+    .add-task-row textarea {
       flex: 1;
       background: var(--bg);
       border: 1px solid var(--border);
@@ -464,10 +492,10 @@
       max-height: 120px;
       transition: border-color 0.15s ease;
     }
-    .add-task textarea::placeholder { color: var(--text-faint); }
-    .add-task textarea:focus { outline: none; border-color: var(--green-dim); }
+    .add-task-row textarea::placeholder { color: var(--text-faint); }
+    .add-task-row textarea:focus { outline: none; border-color: var(--green-dim); }
 
-    .add-task button {
+    .add-task-row button {
       background: var(--bg-elevated);
       color: var(--green-bright);
       border: 1px solid var(--border);
@@ -478,7 +506,7 @@
       font-weight: 600;
       transition: border-color 0.15s ease, background 0.15s ease;
     }
-    .add-task button:hover {
+    .add-task-row button:hover {
       border-color: var(--green-dim);
       background: var(--bg-card);
       box-shadow: 0 0 12px var(--green-glow-soft);
@@ -587,10 +615,13 @@
       const descricao = textarea.value.trim();
       if (!descricao) return;
 
+      const grupoInput = textarea.closest('.add-task').querySelector('.grupo-input');
+      const grupo = grupoInput ? grupoInput.value.trim() : '';
+
       await fetch(`/projects/${projectId}/tasks`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ descricao })
+        body: JSON.stringify({ descricao, grupo })
       });
       location.reload();
     }
