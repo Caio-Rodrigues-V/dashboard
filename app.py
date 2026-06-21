@@ -14,30 +14,47 @@ supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 def index():
     projects = supabase.table("projects").select("*").order("created_at", desc=True).execute().data
     tasks = supabase.table("tasks").select("*").execute().data
+    groups = supabase.table("groups").select("*").execute().data
 
     tasks_by_project = {}
     for t in tasks:
         tasks_by_project.setdefault(t["project_id"], []).append(t)
 
+    groups_by_project = {}
+    for g in groups:
+        groups_by_project.setdefault(g["project_id"], []).append(g)
+
     for p in projects:
         p_tasks = tasks_by_project.get(p["id"], [])
-        p_tasks_sorted = sorted(p_tasks, key=lambda x: (x.get("ordem") or 0, x["created_at"]))
         total = len(p_tasks)
         done = sum(1 for t in p_tasks if t["done"])
         p["progresso"] = f"{done}/{total}" if total else "0/0"
         p["progresso_pct"] = int((done / total) * 100) if total else 0
 
-        # agrupa por "grupo": None vira um grupo "Geral" implícito (sem cabeçalho)
-        grupos = {}
-        ordem_grupos = []
-        for t in p_tasks_sorted:
-            chave = t.get("grupo") or None
-            if chave not in grupos:
-                grupos[chave] = []
-                ordem_grupos.append(chave)
-            grupos[chave].append(t)
+        tasks_by_group = {}
+        for t in p_tasks:
+            tasks_by_group.setdefault(t.get("group_id"), []).append(t)
 
-        p["grupos"] = [{"nome": g, "tasks": grupos[g]} for g in ordem_grupos]
+        for chave in tasks_by_group:
+            tasks_by_group[chave] = sorted(
+                tasks_by_group[chave],
+                key=lambda x: (x.get("ordem") or 0, x["created_at"])
+            )
+
+        p_groups = sorted(groups_by_project.get(p["id"], []), key=lambda g: (g.get("ordem") or 0, g["created_at"]))
+
+        grupos_renderizados = []
+        for g in p_groups:
+            grupos_renderizados.append({
+                "id": g["id"],
+                "nome": g["nome"],
+                "tasks": tasks_by_group.get(g["id"], [])
+            })
+
+        # tasks sem grupo (group_id nulo) ficam soltas no topo, sem cabeçalho
+        soltas = tasks_by_group.get(None, [])
+        p["soltas"] = soltas
+        p["grupos"] = grupos_renderizados
 
     freelance = [p for p in projects if p["tipo"] == "freelance"]
     pessoal = [p for p in projects if p["tipo"] == "pessoal"]
@@ -72,11 +89,35 @@ def delete_project(project_id):
     return "", 204
 
 
+@app.route("/projects/<project_id>/groups", methods=["POST"])
+def create_group(project_id):
+    data = request.json
+    nome = (data.get("nome") or "").strip()
+
+    if not nome:
+        return jsonify({"error": "nome é obrigatório"}), 400
+
+    result = supabase.table("groups").insert({
+        "project_id": project_id,
+        "nome": nome
+    }).execute()
+
+    return jsonify(result.data[0]), 201
+
+
+@app.route("/groups/<group_id>", methods=["DELETE"])
+def delete_group(group_id):
+    # tasks do grupo ficam soltas (group_id vira null) em vez de serem apagadas
+    supabase.table("tasks").update({"group_id": None}).eq("group_id", group_id).execute()
+    supabase.table("groups").delete().eq("id", group_id).execute()
+    return "", 204
+
+
 @app.route("/projects/<project_id>/tasks", methods=["POST"])
 def create_task(project_id):
     data = request.json
     raw = data.get("descricao") or ""
-    grupo = (data.get("grupo") or "").strip() or None
+    group_id = data.get("group_id") or None
 
     partes = re.split(r"[,\n]", raw)
     descricoes = [p.strip() for p in partes if p.strip()]
@@ -84,7 +125,10 @@ def create_task(project_id):
     if not descricoes:
         return jsonify({"error": "descricao é obrigatória"}), 400
 
-    novas_tasks = [{"project_id": project_id, "descricao": d, "grupo": grupo} for d in descricoes]
+    novas_tasks = [
+        {"project_id": project_id, "descricao": d, "group_id": group_id}
+        for d in descricoes
+    ]
     result = supabase.table("tasks").insert(novas_tasks).execute()
 
     return jsonify(result.data), 201
@@ -111,32 +155,39 @@ def delete_task(task_id):
 @app.route("/tasks/reorder", methods=["POST"])
 def reorder_tasks():
     """
-    Recebe a lista de tasks afetadas após um drag-and-drop, já na ordem final.
+    Recebe o estado completo de um projeto após um drag-and-drop: a ordem
+    final dos grupos e, dentro de cada um, a ordem final das tasks.
+
     Body esperado:
     {
-      "items": [
-        {"id": "uuid-1", "grupo": "Importação"},
-        {"id": "uuid-2", "grupo": "Importação"},
-        {"id": "uuid-3", "grupo": null}
+      "groups": [
+        {"id": "group-uuid-1"},
+        {"id": "group-uuid-2"}
+      ],
+      "tasks": [
+        {"id": "task-uuid-1", "group_id": "group-uuid-1"},
+        {"id": "task-uuid-2", "group_id": "group-uuid-1"},
+        {"id": "task-uuid-3", "group_id": null}
       ]
     }
-    Cada item recebe sua posição (índice na lista) como nova "ordem",
-    e o "grupo" é atualizado caso a task tenha mudado de seção.
     """
     data = request.json
-    items = data.get("items") or []
+    groups = data.get("groups") or []
+    tasks = data.get("tasks") or []
 
-    if not items:
-        return jsonify({"error": "items é obrigatório"}), 400
+    for posicao, g in enumerate(groups):
+        group_id = g.get("id")
+        if not group_id:
+            continue
+        supabase.table("groups").update({"ordem": posicao}).eq("id", group_id).execute()
 
-    for posicao, item in enumerate(items):
-        task_id = item.get("id")
-        grupo = (item.get("grupo") or "").strip() or None
+    for posicao, t in enumerate(tasks):
+        task_id = t.get("id")
         if not task_id:
             continue
         supabase.table("tasks").update({
             "ordem": posicao,
-            "grupo": grupo
+            "group_id": t.get("group_id")
         }).eq("id", task_id).execute()
 
     return jsonify({"ok": True}), 200
