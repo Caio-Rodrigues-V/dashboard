@@ -13,18 +13,23 @@
   </div>
   <div class="bar"><div class="bar-fill" style="width: {{ p.progresso_pct }}%"></div></div>
 
-  <div class="tasks">
+  <div class="tasks" data-project-id="{{ p.id }}">
     {% for grupo in p.grupos %}
+    <div class="grupo-bloco" data-grupo-nome="{{ grupo.nome or '' }}">
       {% if grupo.nome %}
       <div class="grupo-titulo">{{ grupo.nome }}</div>
       {% endif %}
-      {% for t in grupo.tasks %}
-      <div class="task {{ 'done' if t.done else '' }}" data-id="{{ t.id }}">
-        <input type="checkbox" {{ 'checked' if t.done else '' }} onchange="toggleTask('{{ t.id }}', this.checked)">
-        <span class="descricao">{{ t.descricao }}</span>
-        <button class="del-task" onclick="deletarTask('{{ t.id }}')">✕</button>
+      <div class="grupo-tasks sortable-tasks" data-grupo-nome="{{ grupo.nome or '' }}">
+        {% for t in grupo.tasks %}
+        <div class="task {{ 'done' if t.done else '' }}" data-id="{{ t.id }}">
+          <span class="drag-handle">⋮⋮</span>
+          <input type="checkbox" {{ 'checked' if t.done else '' }} onchange="toggleTask('{{ t.id }}', this.checked)">
+          <span class="descricao">{{ t.descricao }}</span>
+          <button class="del-task" onclick="deletarTask('{{ t.id }}')">✕</button>
+        </div>
+        {% endfor %}
       </div>
-      {% endfor %}
+    </div>
     {% endfor %}
   </div>
 

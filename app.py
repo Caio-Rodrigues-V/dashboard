@@ -21,7 +21,7 @@ def index():
 
     for p in projects:
         p_tasks = tasks_by_project.get(p["id"], [])
-        p_tasks_sorted = sorted(p_tasks, key=lambda x: x["created_at"])
+        p_tasks_sorted = sorted(p_tasks, key=lambda x: (x.get("ordem") or 0, x["created_at"]))
         total = len(p_tasks)
         done = sum(1 for t in p_tasks if t["done"])
         p["progresso"] = f"{done}/{total}" if total else "0/0"
@@ -106,6 +106,40 @@ def toggle_task(task_id):
 def delete_task(task_id):
     supabase.table("tasks").delete().eq("id", task_id).execute()
     return "", 204
+
+
+@app.route("/tasks/reorder", methods=["POST"])
+def reorder_tasks():
+    """
+    Recebe a lista de tasks afetadas após um drag-and-drop, já na ordem final.
+    Body esperado:
+    {
+      "items": [
+        {"id": "uuid-1", "grupo": "Importação"},
+        {"id": "uuid-2", "grupo": "Importação"},
+        {"id": "uuid-3", "grupo": null}
+      ]
+    }
+    Cada item recebe sua posição (índice na lista) como nova "ordem",
+    e o "grupo" é atualizado caso a task tenha mudado de seção.
+    """
+    data = request.json
+    items = data.get("items") or []
+
+    if not items:
+        return jsonify({"error": "items é obrigatório"}), 400
+
+    for posicao, item in enumerate(items):
+        task_id = item.get("id")
+        grupo = (item.get("grupo") or "").strip() or None
+        if not task_id:
+            continue
+        supabase.table("tasks").update({
+            "ordem": posicao,
+            "grupo": grupo
+        }).eq("id", task_id).execute()
+
+    return jsonify({"ok": True}), 200
 
 
 if __name__ == "__main__":

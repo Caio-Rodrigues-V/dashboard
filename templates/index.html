@@ -6,6 +6,7 @@
   <title>Painel de Projetos</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.2/Sortable.min.js"></script>
   <style>
     :root {
       --bg: #050706;
@@ -393,6 +394,8 @@
 
     .tasks { margin-top: 16px; }
 
+    .grupo-bloco { }
+
     .grupo-titulo {
       font-family: var(--mono);
       font-size: 10.5px;
@@ -404,15 +407,37 @@
       padding-bottom: 4px;
       border-bottom: 1px solid var(--border);
     }
-    .grupo-titulo:first-child { margin-top: 0; }
+    .grupo-bloco:first-child .grupo-titulo { margin-top: 0; }
+
+    .grupo-tasks { min-height: 8px; }
+
+    .grupo-tasks.sortable-ghost {
+      opacity: 0.3;
+      background: var(--green-glow-soft);
+      border-radius: 6px;
+    }
 
     .task {
       display: flex;
       align-items: flex-start;
-      gap: 10px;
+      gap: 8px;
       padding: 7px 0;
       font-size: 13.5px;
     }
+
+    .drag-handle {
+      cursor: grab;
+      color: var(--text-faint);
+      font-size: 12px;
+      line-height: 1.6;
+      letter-spacing: -2px;
+      padding: 0 2px;
+      visibility: hidden;
+      user-select: none;
+      flex-shrink: 0;
+    }
+    .task:hover .drag-handle { visibility: visible; }
+    .drag-handle:active { cursor: grabbing; }
 
     .task input[type=checkbox] {
       appearance: none;
@@ -639,6 +664,44 @@
       await fetch(`/tasks/${id}`, { method: 'DELETE' });
       location.reload();
     }
+
+    function salvarOrdem(tasksContainer) {
+      const items = [];
+
+      tasksContainer.querySelectorAll('.grupo-tasks').forEach(grupoEl => {
+        const grupoNome = grupoEl.dataset.grupoNome || '';
+        grupoEl.querySelectorAll('.task').forEach(taskEl => {
+          items.push({ id: taskEl.dataset.id, grupo: grupoNome });
+        });
+      });
+
+      fetch('/tasks/reorder', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ items })
+      }).catch(() => {
+        // silencioso: pior caso, ordem volta ao normal no próximo reload
+      });
+    }
+
+    function initSortable() {
+      document.querySelectorAll('.tasks').forEach(tasksContainer => {
+        const projectId = tasksContainer.dataset.projectId;
+        const grupos = tasksContainer.querySelectorAll('.sortable-tasks');
+
+        grupos.forEach(grupoEl => {
+          new Sortable(grupoEl, {
+            group: `tasks-${projectId}`,
+            animation: 150,
+            handle: '.drag-handle',
+            ghostClass: 'sortable-ghost',
+            onEnd: () => salvarOrdem(tasksContainer)
+          });
+        });
+      });
+    }
+
+    document.addEventListener('DOMContentLoaded', initSortable);
   </script>
 </body>
 </html>
